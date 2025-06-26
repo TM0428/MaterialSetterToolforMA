@@ -1,17 +1,26 @@
 {
   "name": "com.428-tm.material-setter-tool-for-ma",
-  "displayName": "com.428-tm.material-setter-tool-for-ma",
-  "version": "0.0.1",
-  "description": "A tool for setting materials from prefab in Modular Avatars",
+  "displayName": "Material Setter Tool for MA",
+  "version": "1.0.0",
+  "unity": "2022.3",
+  "description": "A tool to set materials for MA(Modular Avatar) in VRChat.",
+  "vrchatVersion": "2022.1.1",
+  "author": {
+    "name": "428-tm",
+    "url": "https://github.com/428-tm"
+  },
   "dependencies": {},
-  "gitDependencies": {},
   "vpmDependencies": {
+    "nadena.dev.modular-avatar": "1.9.0",
     "com.vrchat.avatars": "3.8.2"
   },
-  "author": {
-    "name": "428_tm",
-    "email": "bakeuso001@gmail.com"
-  },
-  "legacyFolders": {},
-  "legacyFiles": {}
+  "url": "https://github.com/428-tm/MaterialSetterToolforMA",
+  "keywords": [
+    "VRChat",
+    "ModularAvatar",
+    "Material",
+    "Editor",
+    "Tool"
+  ],
+  "license": "MIT"
 }
