@@ -1,76 +1,143 @@
-# VPM Package Template
+# Material Setter Tool for Modular AvatarAdd commentMore actions
 
-Starter for making Packages, including automation for building and publishing them.
+このツールは、色違いのPrefabから自動的にModular Avatar（MA）のMaterial Setterメニューを作成するUnity Editorツールです。
 
-Once you're all set up, you'll be able to push changes to this repository and have .zip and .unitypackage versions automatically generated, and a listing made which works in the VPM for delivering updates for this package. If you want to make a listing with a variety of packages, check out our [template-package-listing](https://github.com/vrchat-community/template-package-listing) repo.
+## 概要
 
-## ▶ Getting Started
+アバターの衣装や装飾品などで色違いのバリエーションがある場合、手動でMA Material Setterを設定するのは非常に手間がかかります。このツールを使用することで、色違いのPrefabから自動的にメニュー構造とMaterial Setterを生成できます。
 
-* Press [![Use This Template](https://user-images.githubusercontent.com/737888/185467681-e5fdb099-d99f-454b-8d9e-0760e5a6e588.png)](https://github.com/vrchat-community/template-package/generate)
-to start a new GitHub project based on this template.
-  * Choose a fitting repository name and description.
-  * Set the visibility to 'Public'. You can also choose 'Private' and change it later.
-  * You don't need to select 'Include all branches.'
-* Clone this repository locally using Git.
-  * If you're unfamiliar with Git and GitHub, [visit GitHub's documentation](https://docs.github.com/en/get-started/quickstart/git-and-github-learning-resources) to learn more.
-* Add the folder to Unity Hub and open it as a Unity Project.
-* After opening the project, wait while the VPM resolver is downloaded and added to your project.
-  * This gives you access to the VPM Package Maker and Package Resolver tools.
+## アクセス方法
 
-## 🚇 Migrating Assets Package
-Full details at [Converting Assets to a VPM Package](https://vcc.docs.vrchat.com/guides/convert-unitypackage)
+Unity Editorのメニューバーから **Tools > Modular Avatar > Material Setter Creator** を選択してツールウィンドウを開きます。
 
-## ✏️ Working on Your Package
+## 機能
 
-* Delete the "Packages/com.vrchat.demo-template" directory or reuse it for your own package.
-  * If you reuse the package, don't forget to rename it and add generated meta files to your repository!
-* Update the `.gitignore` file in the "Packages" directory to include your package.
-  * For example, change `!com.vrchat.demo-template` to `!com.username.package-name`.
-  * `.gitignore` files normally *exclude* the contents of your "Packages" directory. This `.gitignore` in this template show how to *include* the demo package. You can easily change this out for your own package name.
-* Open the Unity project and work on your package's files in your favorite code editor.
-* When you're ready, commit and push your changes.
-* Once you've set up the automation as described below, you can easily publish new versions.
+- **独立したエディターウィンドウ**: GameObjectにアタッチ不要
+- **自動メニュー生成**: アバター配下に指定した名前のオブジェクトを作成
+- **MA Menu Installer自動設定**: メニューインストーラーの自動追加と設定
+- **MA Menu Item自動生成**: 各色バリエーション用のメニューアイテム作成
+- **Material Setter自動設定**: Prefabのマテリアル情報から自動でMaterial Setterを設定
+- **動的バリエーション管理**: バリエーションの追加・削除が簡単
+- **Undo対応**: 操作の取り消しが可能
+- **エラー検証**: 設定漏れや問題を事前にチェック
 
-## 🤖 Setting up the Automation
+## 使用方法
 
-Create a repository variable with the name and value described below.
-For details on how to create repository variables, see [Creating Configuration Variables for a Repository](https://docs.github.com/en/actions/learn-github-actions/variables#creating-configuration-variables-for-a-repository).
-Make sure you are creating a **repository variable**, and not a **repository secret**.
+### 1. ツールの起動
 
-* `PACKAGE_NAME`: the name of your package, like `com.vrchat.demo-template`.
+1. Unity Editorで **Tools > Modular Avatar > Material Setter Creator** を選択
+2. Material Setter Creatorウィンドウが開きます
 
-Finally, go to the "Settings" page for your repo, then choose "Pages", and look for the heading "Build and deployment". Change the "Source" dropdown from "Deploy from a branch" to "GitHub Actions".
+### 2. 基本設定
 
-That's it!
-Some other notes:
-* We highly recommend you keep the existing folder structure of this template.
-  * The root of the project should be a Unity project.
-  * Your packages should be in the "Packages" directory.
-  * If you deviate from this folder structure, you'll need to update the paths that assume your package is in the "Packages" directory on lines 24, 38, 41 and 57.
-* If you want to store and generate your web files in a folder other than "Website" in the root, you can change the `listPublicDirectory` item [here in build-listing.yml](.github/workflows/build-listing.yml#L17).
+#### 基本設定
+- **アバターのルートオブジェクト**: アバターのルートオブジェクトを設定
+- **着せ替え対象のオブジェクト**: 実際に着ている服などの対象オブジェクトを設定
 
-## 🎉 Publishing a Release
+#### メニュー設定
+- **メニュー名**: 作成するメニューの名前（デフォルト: "Color"）
+- **メニューアイコン**: メニューのアイコン（オプション）
 
-You can make a release by running the [Build Release](.github/workflows/release.yml) action. The version specified in your `package.json` file will be used to define the version of the release.
+### 3. 色バリエーションの設定
 
-## 📃 Rebuilding the Listing
+1. **「バリエーション追加」**ボタンで新しい色バリエーションを追加
+2. 各バリエーションで以下を設定：
+   - **名前**: バリエーションの名前（例：「赤」「青」「緑」）
+   - **Prefab**: 色違いのPrefab
+   - **アイコン**: メニューアイテムのアイコン（オプション）
+3. 不要なバリエーションは**「このバリエーションを削除」**で削除可能
 
-Whenever you make a change to a release - manually publishing it, or manually creating, editing or deleting a release, the [Build Repo Listing](.github/workflows/build-listing.yml) action will make a new index of all the releases available, and publish them as a website hosted fore free on [GitHub Pages](https://pages.github.com/). This listing can be used by the VPM to keep your package up to date, and the generated index page can serve as a simple landing page with info for your package. The URL for your package will be in the format `https://username.github.io/repo-name`.
+### 4. 実行
 
-## 🏠 Customizing the Landing Page (Optional)
+1. すべての設定を入力後、エラーがないことを確認
+2. **「Material Setterメニューを作成」**ボタンをクリック
+3. 自動的にメニュー構造とMaterial Setterが生成される
 
-The action which rebuilds the listing also publishes a landing page. The source for this page is in `Website/index.html`. The automation system uses [Scriban](https://github.com/scriban/scriban) to fill in the objects like `{{ this }}` with information from the latest release's manifest, so it will stay up-to-date with the name, id and description that you provide there. You are welcome to modify this page however you want - just use the existing `{{ template.objects }}` to fill in that info wherever you like. The entire contents of your "Website" folder are published to your GitHub Page each time.
+## 生成される構造
 
-## 💻 Technical Stuff
+```
+Avatar Root
+└── [Menu Name] (例: Color)
+    ├── MA Menu Installer
+    ├── MA Menu Item (SubMenu)
+    ├── [Variant 1] (例: 赤)
+    │   ├── MA Menu Item (Toggle, Parameter: "ColorSelect", Value: 自動)
+    │   └── MA Material Setter
+    ├── [Variant 2] (例: 青)
+    │   ├── MA Menu Item (Toggle, Parameter: "ColorSelect", Value: 自動)
+    │   └── MA Material Setter
+    └── [Variant 3] (例: 緑)
+        ├── MA Menu Item (Toggle, Parameter: "ColorSelect", Value: 自動)
+        └── MA Material Setter
+```
 
-You are welcome to make your own changes to the automation process to make it fit your needs, and you can create Pull Requests if you have some changes you think we should adopt. Here's some more info on the included automation:
+## パラメーター設定
 
-### Build Release Action
-[release.yml](/.github/workflows/release.yml)
+- **パラメーター名**: "ColorSelect" (固定)
+- **パラメーター値**: 自動割り当て（0, 1, 2...）
+- **初期設定**: すべてOFF（どれもデフォルトにしない）
+- **Synced**: 有効
+- **Saved**: 有効
 
-This is a composite action combining a variety of existing GitHub Actions and some shell commands to create both a .zip of your Package and a .unitypackage. It creates a release which is named for the `version` in the `package.json` file found in your target Package, and publishes the zip, the unitypackage and the package.json file to this release.
+## 注意事項
 
-### Build Repo Listing
-[build-listing.yml](.github/workflows/build-listing.yml)
+### 前提条件
+- Modular Avatar v1.8.0以降がインストールされている必要があります
+- VRChat SDK3 Avatarsがインストールされている必要があります
 
-This is a composite action which builds a vpm-compatible [Repo Listing](https://vcc.docs.vrchat.com/vpm/repos) based on the releases you've created. In order to find all your releases and combine them into a listing, it checks out [another repository](https://github.com/vrchat-community/package-list-action) which has a [Nuke](https://nuke.build/) project which includes the VPM core lib to have access to its types and methods. This project will be expanded to include more functionality in the future - for now, the action just calls its `BuildRepoListing` target.
+### Prefabの構造について
+- ツールはPrefab内のRenderer構造を基に、ターゲットオブジェクト内の対応するRendererを探します
+- 相対パスでの検索を試行後、名前でのマッチングを行います
+- 複雑な階層構造の場合、手動での調整が必要な場合があります
+
+### バリエーション管理
+- バリエーションは動的に追加・削除できます
+- 最低1つのバリエーションが必要です
+- 同名のバリエーションがある場合はスキップされます
+
+## UI機能
+
+### エラー検証
+リアルタイムで設定の検証が行われ、以下の状況でエラー・警告が表示されます：
+- 必須フィールドの未入力
+- Prefabの未設定
+- 名前の未入力
+
+### ヘルプ表示
+「ヘルプを表示」チェックボックスでヘルプ情報の表示を切り替えできます。
+
+## トラブルシューティング
+
+### よくある問題
+
+1. **マテリアルが正しく設定されない**
+   - PrefabとTarget Objectの階層構造が一致しているか確認
+   - Renderer名が一致しているか確認
+
+2. **「レンダラーが見つかりません」警告**
+   - PrefabとTarget Objectの構造を見直す
+   - 必要に応じて手動でMaterial Setterを調整
+
+3. **メニューが表示されない**
+   - MA Menu Installerの設定を確認
+   - アバターにVRChat Avatar Descriptorが設定されているか確認
+
+### デバッグ情報
+ツール実行時にConsoleに詳細な情報が出力されます：
+- 作成されたオブジェクト数
+- Material Setterの設定状況
+- エラーや警告メッセージ
+
+## 更新履歴
+
+### v1.0.0
+- エディターウィンドウ形式に変更
+- Tools > Modular Avatar メニューに統合
+- パラメーター設定を"ColorSelect"固定、値自動、初期設定OFFに変更
+- 動的なバリエーション管理機能追加
+- UI/UX の大幅改善
+
+## ライセンス
+
+このツールはMITライセンスの下で公開されています。
+
