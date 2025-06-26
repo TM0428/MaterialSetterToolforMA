@@ -1,0 +1,17 @@
+{
+  "name": "com.428-tm.material-setter-tool-for-ma",
+  "displayName": "com.428-tm.material-setter-tool-for-ma",
+  "version": "0.0.1",
+  "description": "A tool for setting materials from prefab in Modular Avatars",
+  "dependencies": {},
+  "gitDependencies": {},
+  "vpmDependencies": {
+    "com.vrchat.avatars": "3.8.2"
+  },
+  "author": {
+    "name": "428_tm",
+    "email": "bakeuso001@gmail.com"
+  },
+  "legacyFolders": {},
+  "legacyFiles": {}
+}
