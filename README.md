@@ -1,4 +1,4 @@
-# Material Setter Tool for Modular AvatarAdd commentMore actions
+# Material Setter Tool for Modular Avatar
 
 このツールは、色違いのPrefabから自動的にModular Avatar（MA）のMaterial Setterメニューを作成するUnity Editorツールです。
 
