@@ -1,21 +1,16 @@
 using UnityEngine;
 using UnityEditor;
-using VRC.SDK3.Avatars.Components;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace com.tm428.material_setter_tool_for_ma
 {
+    /// <summary>
+    /// Material Setter Creator の EditorWindow
+    /// UI の表示とユーザー操作の処理のみを担当
+    /// </summary>
     public class MaterialSetterCreatorWindow : EditorWindow
     {
-        [System.Serializable]
-        public class ColorVariation
-        {
-            public string name = "";
-            public GameObject prefab;
-            public Texture2D icon;
-        }
-
         private GameObject avatarRoot;
         private GameObject targetObject;
         private string menuName = "Color";
@@ -23,6 +18,10 @@ namespace com.tm428.material_setter_tool_for_ma
         private List<ColorVariation> variations = new List<ColorVariation>();
         private Vector2 scrollPosition;
         private bool showHelp = true;
+
+        // 各機能のコンポーネント
+        private PreviewGenerator previewGenerator;
+        private MaterialSetterCreator materialSetterCreator;
 
         [MenuItem("Tools/Modular Avatar/Material Setter Creator")]
         public static void ShowWindow()
@@ -36,8 +35,12 @@ namespace com.tm428.material_setter_tool_for_ma
         {
             if (variations.Count == 0)
             {
-                variations.Add(new ColorVariation());
+                variations.Add(new ColorVariation { autoGeneratePreview = true });
             }
+
+            // 各機能のコンポーネントを初期化
+            previewGenerator = new PreviewGenerator();
+            materialSetterCreator = new MaterialSetterCreator();
         }
 
         private void OnGUI()
@@ -101,6 +104,16 @@ namespace com.tm428.material_setter_tool_for_ma
                 new GUIContent("メニューアイコン", 
                 showHelp ? "メニューのアイコン（オプション）" : ""),
                 menuIcon, typeof(Texture2D), false);
+
+            EditorGUILayout.Space();
+            
+            // 一括プレビュー生成ボタン
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("全てのプレビューを生成", GUILayout.Height(25)))
+            {
+                GenerateAllPreviews();
+            }
+            EditorGUILayout.EndHorizontal();
         }
 
         private void DrawVariationSettings()
@@ -128,7 +141,19 @@ namespace com.tm428.material_setter_tool_for_ma
                     showHelp ? "メニューアイテムのアイコン（オプション）" : ""),
                     variations[i].icon, typeof(Texture2D), false);
 
+                // 自動プレビュー生成オプション
+                variations[i].autoGeneratePreview = EditorGUILayout.Toggle(
+                    new GUIContent("プレビュー自動生成", 
+                    showHelp ? "このバリエーションのプレビュー画像を自動で生成します" : ""),
+                    variations[i].autoGeneratePreview);
+
+                // プレビュー生成ボタン
                 EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("プレビュー生成", GUILayout.Width(120)))
+                {
+                    GeneratePreviewForVariation(i);
+                }
+                
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("このバリエーションを削除", GUILayout.Width(150)))
                 {
@@ -146,13 +171,13 @@ namespace com.tm428.material_setter_tool_for_ma
 
             if (GUILayout.Button("バリエーション追加"))
             {
-                variations.Add(new ColorVariation());
+                variations.Add(new ColorVariation { autoGeneratePreview = true });
             }
         }
 
         private void DrawValidationErrors()
         {
-            var errors = GetValidationErrors();
+            var errors = MaterialSetterValidator.GetValidationErrors(avatarRoot, targetObject, menuName, variations);
             if (errors.Count > 0)
             {
                 EditorGUILayout.LabelField("エラー・警告", EditorStyles.boldLabel);
@@ -165,332 +190,93 @@ namespace com.tm428.material_setter_tool_for_ma
 
         private void DrawExecuteButton()
         {
-            GUI.enabled = GetValidationErrors().Count == 0;
+            var errors = MaterialSetterValidator.GetValidationErrors(avatarRoot, targetObject, menuName, variations);
+            GUI.enabled = errors.Count == 0;
             
             if (GUILayout.Button("Material Setterメニューを作成", GUILayout.Height(30)))
             {
-                CreateMaterialSetterMenu();
+                materialSetterCreator.CreateMaterialSetterMenu(avatarRoot, targetObject, menuName, menuIcon, variations);
             }
             
             GUI.enabled = true;
         }
 
-        private List<string> GetValidationErrors()
+        /// <summary>
+        /// 個別のバリエーションのプレビューを生成
+        /// </summary>
+        private void GeneratePreviewForVariation(int index)
         {
-            var errors = new List<string>();
-
-            if (avatarRoot == null)
-                errors.Add("アバターのルートオブジェクトが設定されていません");
+            if (variations[index].prefab != null && avatarRoot != null)
+            {
+                var preview = previewGenerator.GeneratePreview(variations[index].prefab, avatarRoot);
+                if (preview != null)
+                {
+                    variations[index].icon = preview;
+                    EditorUtility.SetDirty(this);
+                }
+            }
             else
             {
-                // VRChat Avatar Descriptorの存在チェック
-                var avatarDescriptor = avatarRoot.GetComponent<VRCAvatarDescriptor>();
-                if (avatarDescriptor == null)
-                {
-                    errors.Add("アバターのルートオブジェクトにVRCAvatarDescriptorが見つかりません");
-                }
+                EditorUtility.DisplayDialog("エラー", "アバターのルートオブジェクトとPrefabの両方が設定されている必要があります。", "OK");
             }
-
-            if (targetObject == null)
-                errors.Add("着せ替え対象のオブジェクトが設定されていません");
-            else if (avatarRoot != null)
-            {
-                // ターゲットオブジェクトがアバター配下にあるかチェック
-                if (!IsChildOf(targetObject.transform, avatarRoot.transform))
-                {
-                    errors.Add("着せ替え対象のオブジェクトがアバターの配下にありません");
-                }
-            }
-
-            if (string.IsNullOrEmpty(menuName))
-                errors.Add("メニュー名が入力されていません");
-
-            if (variations.Count == 0)
-                errors.Add("最低1つのバリエーションが必要です");
-
-            for (int i = 0; i < variations.Count; i++)
-            {
-                if (string.IsNullOrEmpty(variations[i].name))
-                    errors.Add($"バリエーション {i + 1} の名前が入力されていません");
-
-                if (variations[i].prefab == null)
-                    errors.Add($"バリエーション {i + 1} のPrefabが設定されていません");
-                else
-                {
-                    // Prefab内にRendererがあるかチェック
-                    var renderers = variations[i].prefab.GetComponentsInChildren<Renderer>(true);
-                    if (renderers.Length == 0)
-                    {
-                        errors.Add($"バリエーション {i + 1} のPrefab内にRendererが見つかりません");
-                    }
-                }
-            }
-
-            // 同名バリエーションチェック
-            var duplicateNames = variations
-                .Where(v => !string.IsNullOrEmpty(v.name))
-                .GroupBy(v => v.name)
-                .Where(g => g.Count() > 1)
-                .Select(g => g.Key);
-
-            foreach (string duplicateName in duplicateNames)
-            {
-                errors.Add($"バリエーション名 \"{duplicateName}\" が重複しています");
-            }
-
-            return errors;
         }
 
-        private bool IsChildOf(Transform child, Transform parent)
+        /// <summary>
+        /// 全てのバリエーションのプレビューを一括生成
+        /// </summary>
+        private void GenerateAllPreviews()
         {
-            Transform current = child;
-            while (current != null)
+            if (avatarRoot == null)
             {
-                if (current == parent) return true;
-                current = current.parent;
+                EditorUtility.DisplayDialog("エラー", "アバターのルートオブジェクトが設定されていません。", "OK");
+                return;
             }
-            return false;
-        }
 
-        private void CreateMaterialSetterMenu()
-        {
+            int successCount = 0;
+            int totalCount = variations.Count(v => v.prefab != null);
+
+            if (totalCount == 0)
+            {
+                EditorUtility.DisplayDialog("情報", "プレビューを生成できるバリエーションがありません。\nPrefabが設定されているバリエーションが必要です。", "OK");
+                return;
+            }
+
+            EditorUtility.DisplayProgressBar("プレビュー生成中", "準備中...", 0f);
+
             try
             {
-                Undo.SetCurrentGroupName("Create Material Setter Menu");
-                int undoGroup = Undo.GetCurrentGroup();
-
-                // 既存の同名オブジェクトをチェック
-                Transform existingObject = avatarRoot.transform.Find(menuName);
-                if (existingObject != null)
-                {
-                    if (!EditorUtility.DisplayDialog("既存オブジェクト", 
-                        $"「{menuName}」という名前のオブジェクトが既に存在します。上書きしますか？", 
-                        "上書き", "キャンセル"))
-                    {
-                        return;
-                    }
-                    Undo.DestroyObjectImmediate(existingObject.gameObject);
-                }
-
-                // "Color" オブジェクトの作成
-                GameObject colorObject = new GameObject(menuName);
-                Undo.RegisterCreatedObjectUndo(colorObject, "Create Color Object");
-                
-                colorObject.transform.SetParent(avatarRoot.transform);
-                colorObject.transform.localPosition = Vector3.zero;
-                colorObject.transform.localRotation = Quaternion.identity;
-                colorObject.transform.localScale = Vector3.one;
-
-                // MA Menu Installer の追加
-                var menuInstaller = colorObject.AddComponent<nadena.dev.modular_avatar.core.ModularAvatarMenuInstaller>();
-                Undo.RegisterCreatedObjectUndo(menuInstaller, "Add Menu Installer");
-
-                // MA Menu Item (SubMenu) の追加 - 子オブジェクトから生成
-                var mainMenuItem = colorObject.AddComponent<nadena.dev.modular_avatar.core.ModularAvatarMenuItem>();
-                Undo.RegisterCreatedObjectUndo(mainMenuItem, "Add Main Menu Item");
-                
-                // 新しいMA Menu ItemのAPI使用
-                mainMenuItem.Control = new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control
-                {
-                    name = menuName,
-                    icon = menuIcon,
-                    type = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    subMenu = null // 子オブジェクトから自動生成
-                };
-
-                // MA Menu Itemの追加プロパティ設定
-                mainMenuItem.MenuSource = nadena.dev.modular_avatar.core.SubmenuSource.Children;
-                mainMenuItem.label = menuName; // メニュー名を明示的に設定
-
-                // 各バリエーション用のオブジェクト作成
-                int createdObjects = 0;
-                int materialSetterCount = 0;
-                
                 for (int i = 0; i < variations.Count; i++)
                 {
-                    if (CreateVariationObject(colorObject, variations[i], i))
+                    if (variations[i].prefab != null)
                     {
-                        createdObjects++;
-                        materialSetterCount += CountMaterials(variations[i].prefab);
-                    }
-                }
+                        EditorUtility.DisplayProgressBar("プレビュー生成中", 
+                            $"バリエーション '{variations[i].name}' のプレビューを生成中...", 
+                            (float)i / variations.Count);
 
-                Debug.Log($"Material Setter メニューを作成しました:");
-                Debug.Log($"- 作成されたオブジェクト数: {createdObjects + 1} (メインメニュー + バリエーション {createdObjects})");
-                Debug.Log($"- Material Setter設定数: {materialSetterCount}");
-                Debug.Log($"- パラメーター名: ColorSelect");
-                Debug.Log($"- パラメーター値: 自動設定（階層順で1から順番に割り当て）");
-                Debug.Log($"- メニュー構造: 子オブジェクトから自動生成");
-                Debug.Log($"- 初期設定: 全てのバリエーションがOFF（パラメーター値=0）");
-                
-                // 選択状態にする
-                Selection.activeGameObject = colorObject;
-                EditorGUIUtility.PingObject(colorObject);
-                
-                Undo.CollapseUndoOperations(undoGroup);
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"Material Setter メニューの作成中にエラーが発生しました: {e.Message}");
-                Debug.LogError($"スタックトレース: {e.StackTrace}");
-            }
-        }
-
-        private bool CreateVariationObject(GameObject parent, ColorVariation variation, int index)
-        {
-            try
-            {
-                // バリエーション用オブジェクト作成
-                GameObject variationObject = new GameObject(variation.name);
-                Undo.RegisterCreatedObjectUndo(variationObject, $"Create Variation {variation.name}");
-                
-                variationObject.transform.SetParent(parent.transform);
-                variationObject.transform.localPosition = Vector3.zero;
-                variationObject.transform.localRotation = Quaternion.identity;
-                variationObject.transform.localScale = Vector3.one;
-
-                // MA Menu Item (Toggle) の追加
-                var menuItem = variationObject.AddComponent<nadena.dev.modular_avatar.core.ModularAvatarMenuItem>();
-                Undo.RegisterCreatedObjectUndo(menuItem, $"Add Menu Item for {variation.name}");
-                
-                // 新しいMA Menu ItemのAPI使用
-                menuItem.Control = new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control
-                {
-                    name = variation.name,
-                    icon = variation.icon,
-                    type = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control.ControlType.Toggle,
-                    parameter = new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control.Parameter
-                    {
-                        name = "ColorSelect"
-                    }
-                };
-
-                // MA Menu Itemの追加プロパティ設定
-                menuItem.isSynced = true;
-                menuItem.isSaved = true;
-                menuItem.isDefault = false; // 全てのアイテムをOFFに設定
-                menuItem.automaticValue = true; // 自動でパラメーター値を設定
-
-                // MA Material Setter の追加
-                var materialSetter = variationObject.AddComponent<nadena.dev.modular_avatar.core.ModularAvatarMaterialSetter>();
-                Undo.RegisterCreatedObjectUndo(materialSetter, $"Add Material Setter for {variation.name}");
-
-                // Material Setter の設定
-                int materialCount = SetupMaterialSetter(materialSetter, variation.prefab);
-                
-                Debug.Log($"バリエーション '{variation.name}' を作成:");
-                Debug.Log($"  - パラメーター値: 自動設定");
-                Debug.Log($"  - マテリアル設定数: {materialCount}");
-                Debug.Log($"  - デフォルト: いいえ（初期状態はOFF）");
-                return true;
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"バリエーション '{variation.name}' の作成中にエラー: {e.Message}");
-                return false;
-            }
-        }
-
-        private int SetupMaterialSetter(nadena.dev.modular_avatar.core.ModularAvatarMaterialSetter materialSetter, GameObject prefab)
-        {
-            if (prefab == null || targetObject == null) return 0;
-
-            int materialCount = 0;
-            
-            // Prefab内のすべてのRendererを取得
-            var prefabRenderers = prefab.GetComponentsInChildren<Renderer>(true);
-            
-            // MaterialSetterのObjectsプロパティを直接使用
-            var objects = new System.Collections.Generic.List<nadena.dev.modular_avatar.core.MaterialSwitchObject>();
-
-            foreach (var prefabRenderer in prefabRenderers)
-            {
-                // 対応するターゲットのRendererを探す
-                var targetRenderer = FindCorrespondingRenderer(prefabRenderer, prefab, targetObject);
-                
-                if (targetRenderer != null)
-                {
-                    // 各マテリアルスロットを設定
-                    for (int i = 0; i < prefabRenderer.sharedMaterials.Length; i++)
-                    {
-                        if (prefabRenderer.sharedMaterials[i] != null && i < targetRenderer.sharedMaterials.Length)
+                        try
                         {
-                            // MaterialSwitchObjectを作成
-                            var materialSwitchObject = new nadena.dev.modular_avatar.core.MaterialSwitchObject
+                            var preview = previewGenerator.GeneratePreview(variations[i].prefab, avatarRoot);
+                            if (preview != null)
                             {
-                                Object = new nadena.dev.modular_avatar.core.AvatarObjectReference(),
-                                Material = prefabRenderer.sharedMaterials[i],
-                                MaterialIndex = i
-                            };
-
-                            // ターゲットオブジェクトを設定
-                            materialSwitchObject.Object.Set(targetRenderer.gameObject);
-                            
-                            objects.Add(materialSwitchObject);
-                            materialCount++;
-                            
-                            Debug.Log($"マテリアル設定追加: {targetRenderer.name}[{i}] -> {prefabRenderer.sharedMaterials[i].name}");
+                                variations[i].icon = preview;
+                                successCount++;
+                                EditorUtility.SetDirty(this);
+                            }
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.LogWarning($"バリエーション '{variations[i].name}' のプレビュー生成中にエラー: {e.Message}");
                         }
                     }
                 }
-                else
-                {
-                    Debug.LogWarning($"対応するレンダラーが見つかりません: {GetRelativePath(prefabRenderer.transform, prefab.transform)}");
-                }
             }
-
-            // MaterialSetterにオブジェクトリストを設定
-            materialSetter.Objects = objects;
-
-            if (materialCount > 0)
+            finally
             {
-                Debug.Log($"Material Setter自動設定完了: {materialCount} 個のマテリアル");
-                // EditorUtilityを使用してオブジェクトを保存対象としてマーク
-                EditorUtility.SetDirty(materialSetter);
-            }
-            
-            return materialCount;
-        }
-
-        private int CountMaterials(GameObject prefab)
-        {
-            if (prefab == null) return 0;
-            
-            var renderers = prefab.GetComponentsInChildren<Renderer>(true);
-            return renderers.Sum(r => r.sharedMaterials.Where(m => m != null).Count());
-        }
-
-        private Renderer FindCorrespondingRenderer(Renderer prefabRenderer, GameObject prefab, GameObject target)
-        {
-            // 相対パスを取得
-            string relativePath = GetRelativePath(prefabRenderer.transform, prefab.transform);
-            
-            // 相対パスでターゲット内を検索
-            Transform targetTransform = target.transform.Find(relativePath);
-            if (targetTransform != null)
-            {
-                var renderer = targetTransform.GetComponent<Renderer>();
-                if (renderer != null) return renderer;
+                EditorUtility.ClearProgressBar();
             }
 
-            // 名前での検索（フォールバック）
-            var targetRenderers = target.GetComponentsInChildren<Renderer>(true);
-            return targetRenderers.FirstOrDefault(r => r.name == prefabRenderer.name);
-        }
-
-        private string GetRelativePath(Transform child, Transform parent)
-        {
-            var path = new List<string>();
-            Transform current = child;
-            
-            while (current != parent && current.parent != null)
-            {
-                path.Add(current.name);
-                current = current.parent;
-            }
-            
-            path.Reverse();
-            return string.Join("/", path);
+            EditorUtility.DisplayDialog("プレビュー生成完了", 
+                $"{successCount} / {totalCount} 個のプレビューを生成しました。", "OK");
         }
     }
 }
