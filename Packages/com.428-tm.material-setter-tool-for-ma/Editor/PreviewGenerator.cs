@@ -12,15 +12,17 @@ namespace com.tm428.material_setter_tool_for_ma
     public class PreviewGenerator
     {
         private readonly int previewLayer = 31; // プレビュー専用レイヤー
-        private readonly int previewSize = 128; // プレビューサイズ
-        private readonly float cameraDistance = 1.5f; // カメラ距離倍率
+        private readonly int previewSize = 1024; // プレビューサイズ
         private readonly float fieldOfView = 30f; // カメラの視野角
         private readonly Vector3 cameraOffset = Vector3.zero; // カメラオフセット
 
         /// <summary>
         /// Prefabからプレビュー画像を生成します
         /// </summary>
-        public Texture2D GeneratePreview(GameObject prefab, GameObject avatarRoot)
+        /// <param name="prefab">プレビュー対象のPrefab</param>
+        /// <param name="avatarRoot">アバターのルートオブジェクト</param>
+        /// <param name="cameraDistance">カメラ距離倍率（デフォルト: 1.0f）</param>
+        public Texture2D GeneratePreview(GameObject prefab, GameObject avatarRoot, float cameraDistance = 1.0f)
         {
             if (prefab == null || avatarRoot == null)
                 return null;

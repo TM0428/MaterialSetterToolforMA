@@ -22,7 +22,7 @@ namespace com.tm428.material_setter_tool_for_ma
         /// Material Setterメニューを作成
         /// </summary>
         public void CreateMaterialSetterMenu(GameObject avatarRoot, GameObject targetObject, 
-            string menuName, Texture2D menuIcon, List<ColorVariation> variations)
+            string menuName, Texture2D menuIcon, List<ColorVariation> variations, float cameraDistance = 1.0f)
         {
             try
             {
@@ -77,7 +77,7 @@ namespace com.tm428.material_setter_tool_for_ma
                 
                 for (int i = 0; i < variations.Count; i++)
                 {
-                    if (CreateVariationObject(colorObject, targetObject, variations[i], i, avatarRoot))
+                    if (CreateVariationObject(colorObject, targetObject, variations[i], i, avatarRoot, cameraDistance))
                     {
                         createdObjects++;
                         materialSetterCount += CountMaterials(variations[i].prefab);
@@ -103,7 +103,7 @@ namespace com.tm428.material_setter_tool_for_ma
         /// <summary>
         /// 個別のバリエーションオブジェクトを作成
         /// </summary>
-        private bool CreateVariationObject(GameObject parent, GameObject targetObject, ColorVariation variation, int index, GameObject avatarRoot)
+        private bool CreateVariationObject(GameObject parent, GameObject targetObject, ColorVariation variation, int index, GameObject avatarRoot, float cameraDistance = 1.0f)
         {
             try
             {
@@ -137,7 +137,7 @@ namespace com.tm428.material_setter_tool_for_ma
                 {
                     try
                     {
-                        var preview = previewGenerator.GeneratePreview(variation.prefab, avatarRoot);
+                        var preview = previewGenerator.GeneratePreview(variation.prefab, avatarRoot, cameraDistance);
                         if (preview != null)
                         {
                             variation.icon = preview;

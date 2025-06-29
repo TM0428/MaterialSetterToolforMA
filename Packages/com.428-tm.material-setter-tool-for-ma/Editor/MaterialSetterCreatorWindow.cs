@@ -18,6 +18,9 @@ namespace com.tm428.material_setter_tool_for_ma
         private List<ColorVariation> variations = new List<ColorVariation>();
         private Vector2 scrollPosition;
         private bool showHelp = true;
+        
+        // プレビュー設定
+        private float previewCameraDistance = 1.0f; // カメラ距離倍率
 
         // 各機能のコンポーネント
         private PreviewGenerator previewGenerator;
@@ -38,9 +41,18 @@ namespace com.tm428.material_setter_tool_for_ma
                 variations.Add(new ColorVariation { autoGeneratePreview = true });
             }
 
+            // プレビュー設定を復元
+            previewCameraDistance = EditorPrefs.GetFloat("MaterialSetterCreator.PreviewCameraDistance", 1.0f);
+
             // 各機能のコンポーネントを初期化
             previewGenerator = new PreviewGenerator();
             materialSetterCreator = new MaterialSetterCreator();
+        }
+
+        private void OnDisable()
+        {
+            // プレビュー設定を保存
+            EditorPrefs.SetFloat("MaterialSetterCreator.PreviewCameraDistance", previewCameraDistance);
         }
 
         private void OnGUI()
@@ -107,6 +119,22 @@ namespace com.tm428.material_setter_tool_for_ma
 
             EditorGUILayout.Space();
             
+            // プレビュー設定
+            EditorGUILayout.LabelField("プレビュー設定", EditorStyles.boldLabel);
+            
+            float newCameraDistance = EditorGUILayout.Slider(
+                new GUIContent("カメラ距離", 
+                showHelp ? "プレビュー撮影時のカメラ距離倍率（0.0 = 近い、3.0 = 遠い）" : ""),
+                previewCameraDistance, 0.0f, 3.0f);
+                
+            if (newCameraDistance != previewCameraDistance)
+            {
+                previewCameraDistance = newCameraDistance;
+                EditorPrefs.SetFloat("MaterialSetterCreator.PreviewCameraDistance", previewCameraDistance);
+            }
+            
+            EditorGUILayout.Space();
+            
             // 一括プレビュー生成ボタン
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("全てのプレビューを生成", GUILayout.Height(25)))
@@ -162,6 +190,11 @@ namespace com.tm428.material_setter_tool_for_ma
                         variations.RemoveAt(i);
                         i--;
                     }
+                    else
+                    {
+                        // 中身を空にする
+                        variations[i] = new ColorVariation { autoGeneratePreview = true };
+                    }
                 }
                 EditorGUILayout.EndHorizontal();
                 
@@ -195,7 +228,7 @@ namespace com.tm428.material_setter_tool_for_ma
             
             if (GUILayout.Button("Material Setterメニューを作成", GUILayout.Height(30)))
             {
-                materialSetterCreator.CreateMaterialSetterMenu(avatarRoot, targetObject, menuName, menuIcon, variations);
+                materialSetterCreator.CreateMaterialSetterMenu(avatarRoot, targetObject, menuName, menuIcon, variations, previewCameraDistance);
             }
             
             GUI.enabled = true;
@@ -208,7 +241,7 @@ namespace com.tm428.material_setter_tool_for_ma
         {
             if (variations[index].prefab != null && avatarRoot != null)
             {
-                var preview = previewGenerator.GeneratePreview(variations[index].prefab, avatarRoot);
+                var preview = previewGenerator.GeneratePreview(variations[index].prefab, avatarRoot, previewCameraDistance);
                 if (preview != null)
                 {
                     variations[index].icon = preview;
@@ -255,7 +288,7 @@ namespace com.tm428.material_setter_tool_for_ma
 
                         try
                         {
-                            var preview = previewGenerator.GeneratePreview(variations[i].prefab, avatarRoot);
+                            var preview = previewGenerator.GeneratePreview(variations[i].prefab, avatarRoot, previewCameraDistance);
                             if (preview != null)
                             {
                                 variations[i].icon = preview;
